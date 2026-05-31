@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Atlas Robot Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#0d1117;--bg1:#161b22;--bg2:#21262d;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;
+  --green:#3fb950;--red:#f85149;--yellow:#d29922;--blue:#58a6ff;--purple:#bc8cff;
+}
+body{background:var(--bg0);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px}
+
+/* ─ Header ─ */
+#header{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;
+  background:var(--bg1);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+#header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
+.conn{display:flex;gap:12px;align-items:center}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:4px;transition:background .3s}
+.dot.green{background:var(--green);box-shadow:0 0 6px var(--green)}
+.dot.red{background:var(--red)}
+.dot.yellow{background:var(--yellow)}
+#rest-host{background:var(--bg2);border:1px solid var(--border);color:var(--text);
+  padding:5px 9px;border-radius:6px;font-size:12px;width:170px}
+
+/* ─ Status bar ─ */
+#statusbar{display:flex;gap:5px;flex-wrap:wrap;padding:7px 20px;
+  background:var(--bg1);border-bottom:1px solid var(--border)}
+.sb{display:flex;align-items:center;gap:6px;padding:4px 10px;
+  background:var(--bg2);border-radius:6px;border:1px solid var(--border);white-space:nowrap}
+.sb .lbl{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.sb .val{font-weight:600;font-size:13px}
+.bat-wrap{width:48px;height:7px;background:var(--bg0);border-radius:4px;overflow:hidden}
+#bat-fill{height:100%;width:0%;background:var(--green);border-radius:4px;transition:width .6s,background .6s}
+.ok{color:var(--green)} .err{color:var(--red)} .warn{color:var(--yellow)} .info{color:var(--blue)}
+
+/* ─ Tabs ─ */
+#tabs{display:flex;gap:3px;padding:8px 20px;background:var(--bg1);
+  border-bottom:1px solid var(--border);overflow-x:auto}
+.tab{padding:6px 14px;border-radius:6px;border:1px solid transparent;background:transparent;
+  color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;transition:all .15s}
+.tab:hover{background:var(--bg2);color:var(--text)}
+.tab.active{background:var(--bg2);color:var(--blue);border-color:var(--border);font-weight:600}
+
+/* ─ Content ─ */
+#content{padding:16px 20px;min-height:calc(100vh - 195px)}
+.panel{display:none}.panel.active{display:block}
+
+/* ─ Cards ─ */
+.card{background:var(--bg1);border:1px solid var(--border);border-radius:8px;
+  padding:16px;margin-bottom:12px}
+.card h3{font-size:13px;font-weight:600;color:var(--blue);border-bottom:1px solid var(--border);
+  padding-bottom:8px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.big{font-size:38px;font-weight:700;line-height:1;margin:6px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:800px){.grid2,.grid3{grid-template-columns:1fr}}
+.kv{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.kv .k{color:var(--muted);min-width:72px;font-size:12px}.kv .v{font-weight:500}
+
+/* ─ Inputs ─ */
+input[type=text],input[type=number],select,textarea{
+  background:var(--bg2);border:1px solid var(--border);color:var(--text);
+  padding:6px 10px;border-radius:6px;font-size:13px;width:100%}
+input[type=range]{width:130px;accent-color:var(--blue);vertical-align:middle}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}
+label{display:block;margin-bottom:9px;color:var(--muted);font-size:12px}
+label span{display:block;margin-bottom:3px}
+textarea{font-family:monospace;resize:vertical}
+hr{border:none;border-top:1px solid var(--border);margin:14px 0}
+
+/* ─ Buttons ─ */
+button{padding:7px 14px;border-radius:6px;border:1px solid var(--border);
+  cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;background:var(--bg2);color:var(--text)}
+button:hover{border-color:var(--muted)}
+.btn-p{background:#1f6feb;border-color:#388bfd;color:#fff}.btn-p:hover{background:#388bfd}
+.btn-d{background:#da3633;border-color:#f85149;color:#fff}.btn-d:hover{background:#f85149}
+.btn-w{background:#9e6a03;border-color:#d29922;color:#fff}.btn-w:hover{background:#d29922}
+.btn-sm{padding:3px 8px;font-size:11px;color:var(--muted)}.btn-sm:hover{color:var(--text)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+/* ─ D-pad ─ */
+.dpad{display:grid;grid-template-columns:64px 64px 64px;
+  grid-template-rows:64px 64px 64px;gap:5px;margin:12px auto;width:fit-content}
+.dp{width:64px;height:64px;font-size:24px;border-radius:10px;background:var(--bg2);
+  border:1px solid var(--border);color:var(--text);cursor:pointer;user-select:none;
+  display:flex;align-items:center;justify-content:center;transition:background .1s,transform .1s}
+.dp:active,.dp.held{background:var(--blue);color:#fff;transform:scale(.94)}
+.dp.stop-dp{background:#da3633;color:#fff;font-size:20px}
+.kbd-hint{text-align:center;color:var(--muted);font-size:11px;margin-top:6px}
+
+/* ─ Table ─ */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px;color:var(--muted);border-bottom:1px solid var(--border);font-weight:500;font-size:12px}
+td{padding:8px;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg2)}
+
+/* ─ Badge ─ */
+.badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:600;text-transform:uppercase}
+.b-idle{background:var(--bg2);color:var(--muted)}
+.b-navigating{background:#1f6feb33;color:var(--blue)}
+.b-succeeded{background:#3fb95033;color:var(--green)}
+.b-failed{background:#f8514933;color:var(--red)}
+.b-cancelled{background:#d2992233;color:var(--yellow)}
+
+/* ─ Map ─ */
+#map-img{display:block;max-width:100%;margin-top:10px;border-radius:6px;
+  background:var(--bg0);min-height:160px;object-fit:contain;border:1px solid var(--border)}
+
+/* ─ Custom result ─ */
+#req-result{background:var(--bg0);border:1px solid var(--border);border-radius:6px;
+  padding:10px;font-family:monospace;font-size:12px;white-space:pre-wrap;
+  max-height:220px;overflow:auto;color:var(--green);margin-top:8px}
+
+/* ─ Toast ─ */
+#toast{position:fixed;bottom:20px;right:20px;z-index:9999;pointer-events:none}
+.t-msg{padding:10px 16px;border-radius:8px;margin-top:6px;font-size:13px;
+  border:1px solid;animation:fin .2s,fout .5s 2.5s forwards}
+.t-ok{background:#3fb95022;border-color:var(--green);color:var(--green)}
+.t-err{background:#f8514922;border-color:var(--red);color:var(--red)}
+.t-info{background:#58a6ff22;border-color:var(--blue);color:var(--blue)}
+@keyframes fin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes fout{from{opacity:1}to{opacity:0}}
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER ══ -->
+<div id="header">
+  <h1>🤖 Atlas Dashboard</h1>
+  <div class="conn">
+    <span><span class="dot red" id="ws-dot"></span><span id="ws-lbl" style="font-size:12px;color:var(--muted)">WS disconnected</span></span>
+    <span style="color:var(--muted);font-size:12px">API:</span>
+    <input id="rest-host" value="localhost:8080" onchange="onHostChange()" title="REST host:port">
+  </div>
+</div>
+
+<!-- ══ STATUS BAR ══ -->
+<div id="statusbar">
+  <div class="sb">
+    <span class="lbl">Battery</span>
+    <div class="bat-wrap"><div id="bat-fill"></div></div>
+    <span class="val" id="sb-bat">--%</span>
+  </div>
+  <div class="sb"><span class="lbl">IMU</span><span class="val ok" id="sb-imu">--</span></div>
+  <div class="sb"><span class="lbl">E-Stop</span><span class="val ok" id="sb-estop">--</span></div>
+  <div class="sb"><span class="lbl">Mode</span><span class="val info" id="sb-mode">--</span></div>
+  <div class="sb"><span class="lbl">Pose</span><span class="val" id="sb-pose">x:-- y:-- θ:--</span></div>
+  <div class="sb"><span class="lbl">Speed</span><span class="val" id="sb-speed">-- m/s</span></div>
+  <div class="sb"><span class="lbl">Nav</span><span class="badge b-idle" id="sb-nav">idle</span></div>
+</div>
+
+<!-- ══ TABS ══ -->
+<div id="tabs">
+  <button class="tab active" data-tab="status"    onclick="showTab(this)">📊 Status</button>
+  <button class="tab"        data-tab="control"   onclick="showTab(this)">🕹️ Control</button>
+  <button class="tab"        data-tab="navigate"  onclick="showTab(this)">🧭 Navigate</button>
+  <button class="tab"        data-tab="map"       onclick="showTab(this)">🗺️ Map</button>
+  <button class="tab"        data-tab="waypoints" onclick="showTab(this)">📍 Waypoints</button>
+  <button class="tab"        data-tab="route"     onclick="showTab(this)">🔄 Route</button>
+  <button class="tab"        data-tab="custom"    onclick="showTab(this)">🔧 Custom</button>
+</div>
+
+<!-- ══ CONTENT ══ -->
+<div id="content">
+
+  <!-- ── STATUS ── -->
+  <div class="panel active" id="tab-status">
+    <div class="grid3">
+      <div class="card">
+        <h3>🔋 Battery &amp; Power</h3>
+        <div class="big ok" id="d-bat">--%</div>
+        <div class="kv"><span class="k">Voltage</span><span class="v" id="d-volt">-- V</span></div>
+        <div class="kv"><span class="k">Charge</span><span class="v" id="d-chg">--</span></div>
+        <div class="kv"><span class="k">E-Stop</span><span class="v" id="d-estop2">--</span></div>
+      </div>
+      <div class="card">
+        <h3>📡 IMU</h3>
+        <div style="color:var(--muted);font-size:11px;margin-bottom:6px">Acceleration (m/s²)</div>
+        <div class="kv"><span class="k">ax</span><span class="v" id="d-ax">0.000</span></div>
+        <div class="kv"><span class="k">ay</span><span class="v" id="d-ay">0.000</span></div>
+        <div class="kv"><span class="k">az</span><span class="v" id="d-az">9.810</span></div>
+        <div style="color:var(--muted);font-size:11px;margin:8px 0 6px">Gyroscope (rad/s)</div>
+        <div class="kv"><span class="k">gx</span><span class="v" id="d-gx">0.000</span></div>
+        <div class="kv"><span class="k">gy</span><span class="v" id="d-gy">0.000</span></div>
+        <div class="kv"><span class="k">gz</span><span class="v" id="d-gz">0.000</span></div>
+      </div>
+      <div class="card">
+        <h3>📍 Pose &amp; Speed</h3>
+        <div style="color:var(--muted);font-size:11px;margin-bottom:6px">Position (map frame)</div>
+        <div class="kv"><span class="k">x</span><span class="v" id="d-x">0.000 m</span></div>
+        <div class="kv"><span class="k">y</span><span class="v" id="d-y">0.000 m</span></div>
+        <div class="kv"><span class="k">yaw</span><span class="v" id="d-yaw">0.000 rad</span></div>
+        <div style="color:var(--muted);font-size:11px;margin:8px 0 6px">Velocity</div>
+        <div class="kv"><span class="k">vx</span><span class="v" id="d-vx">0.000 m/s</span></div>
+        <div class="kv"><span class="k">vy</span><span class="v" id="d-vy">0.000 m/s</span></div>
+        <div class="kv"><span class="k">wz</span><span class="v" id="d-wz">0.000 rad/s</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>🧭 Navigation</h3>
+      <span class="badge b-idle" id="d-nav-badge">idle</span>
+      <span id="d-nav-goal" style="color:var(--muted);font-size:13px;margin-left:8px">--</span>
+    </div>
+  </div>
+
+  <!-- ── CONTROL ── -->
+  <div class="panel" id="tab-control">
+    <div class="card" style="max-width:420px;margin:0 auto">
+      <h3>🕹️ Manual Control</h3>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+        <span style="color:var(--muted);font-size:12px">Speed:</span>
+        <input type="range" id="spd-slider" min="0.1" max="1.0" step="0.05" value="0.3"
+          oninput="document.getElementById('spd-val').textContent=parseFloat(this.value).toFixed(2)">
+        <span id="spd-val" style="font-weight:700;color:var(--blue);min-width:36px">0.30</span>
+        <span style="color:var(--muted);font-size:12px">m/s</span>
+      </div>
+      <div class="dpad">
+        <!-- row1 -->
+        <div></div>
+        <button class="dp" id="btn-fwd"
+          onmousedown="holdStart('fwd')" onmouseup="holdEnd()" onmouseleave="holdEnd()"
+          ontouchstart="holdStart('fwd');event.preventDefault()" ontouchend="holdEnd()">▲</button>
+        <div></div>
+        <!-- row2 -->
+        <button class="dp" id="btn-rot-l"
+          onmousedown="holdStart('rl')" onmouseup="holdEnd()" onmouseleave="holdEnd()"
+          ontouchstart="holdStart('rl');event.preventDefault()" ontouchend="holdEnd()">↺</button>
+        <button class="dp stop-dp" onclick="stopRobot()" title="Space">■</button>
+        <button class="dp" id="btn-rot-r"
+          onmousedown="holdStart('rr')" onmouseup="holdEnd()" onmouseleave="holdEnd()"
+          ontouchstart="holdStart('rr');event.preventDefault()" ontouchend="holdEnd()">↻</button>
+        <!-- row3 -->
+        <button class="dp" id="btn-str-l" style="font-size:15px"
+          onmousedown="holdStart('sl')" onmouseup="holdEnd()" onmouseleave="holdEnd()">◀ Str</button>
+        <button class="dp" id="btn-bwd"
+          onmousedown="holdStart('bwd')" onmouseup="holdEnd()" onmouseleave="holdEnd()"
+          ontouchstart="holdStart('bwd');event.preventDefault()" ontouchend="holdEnd()">▼</button>
+        <button class="dp" id="btn-str-r" style="font-size:15px"
+          onmousedown="holdStart('sr')" onmouseup="holdEnd()" onmouseleave="holdEnd()">Str ▶</button>
+      </div>
+      <div class="kbd-hint">W/S = fwd/bwd &nbsp;|&nbsp; A/D = rotate &nbsp;|&nbsp; Q/E = strafe &nbsp;|&nbsp; Space = stop</div>
+      <div id="ctrl-status" style="text-align:center;color:var(--muted);font-size:11px;margin-top:6px"></div>
+    </div>
+  </div>
+
+  <!-- ── NAVIGATE ── -->
+  <div class="panel" id="tab-navigate">
+    <div class="grid2">
+      <div class="card">
+        <h3>📌 Go to Coordinates</h3>
+        <label><span>X (m)</span><input id="nav-x" type="number" value="0" step="0.1"></label>
+        <label><span>Y (m)</span><input id="nav-y" type="number" value="0" step="0.1"></label>
+        <label><span>Yaw (rad)</span><input id="nav-yaw" type="number" value="0" step="0.05"></label>
+        <div class="btns">
+          <button class="btn-p" onclick="navGoal()">▶ Navigate</button>
+          <button class="btn-d" onclick="navCancel()">✖ Cancel</button>
+        </div>
+        <hr>
+        <h3 style="margin-top:0">🔄 Relocate (Set Initial Pose)</h3>
+        <label><span>X (m)</span><input id="rel-x" type="number" value="0" step="0.1"></label>
+        <label><span>Y (m)</span><input id="rel-y" type="number" value="0" step="0.1"></label>
+        <label><span>Yaw (rad)</span><input id="rel-yaw" type="number" value="0" step="0.05"></label>
+        <div class="btns">
+          <button class="btn-w" onclick="relocate()">📍 Set Pose</button>
+          <button class="btn-sm" onclick="fillRelFromPose()">Use Current</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>🏷️ Go to Named Waypoint</h3>
+        <label><span>Waypoint</span>
+          <select id="nav-wp-sel"><option value="">-- select --</option></select>
+        </label>
+        <button class="btn-p" onclick="navGoalName()">▶ Navigate</button>
+        <hr>
+        <h3 style="margin-top:0">⚡ Quick Actions</h3>
+        <div class="btns" style="flex-direction:column;gap:6px">
+          <button class="btn-d" onclick="navCancel()" style="text-align:left">✖ Cancel Navigation</button>
+          <button onclick="stopRobot()" style="text-align:left">■ Stop Motors</button>
+        </div>
+        <hr>
+        <h3 style="margin-top:0">📊 Nav Status</h3>
+        <span class="badge b-idle" id="nav-badge">idle</span>
+        <div id="nav-goal-text" style="color:var(--muted);font-size:12px;margin-top:8px">--</div>
+        <button class="btn-sm" style="margin-top:6px" onclick="refreshNavStatus()">🔄 Refresh</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MAP ── -->
+  <div class="panel" id="tab-map">
+    <div class="card">
+      <h3>🗺️ Live Map
+        <button class="btn-sm" onclick="refreshMap()">🔄 Refresh</button>
+        <label style="display:inline-flex;align-items:center;gap:4px;margin-left:8px;font-size:11px;color:var(--muted)">
+          <input type="checkbox" id="map-auto" style="width:auto" onchange="toggleMapAuto()"> Auto 5s
+        </label>
+      </h3>
+      <div id="map-meta" style="color:var(--muted);font-size:12px"></div>
+      <img id="map-img" src="" alt="No map — start mapping or subscribe to /map topic">
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>💾 Save Map</h3>
+        <label><span>Alias / Name</span><input id="map-alias" type="text" placeholder="Warehouse Floor 1"></label>
+        <button class="btn-p" onclick="saveMap()">💾 Save Current Map</button>
+      </div>
+      <div class="card">
+        <h3>📋 Saved Maps <button class="btn-sm" onclick="loadMapList()">🔄</button></h3>
+        <div id="map-list" style="color:var(--muted)">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── WAYPOINTS ── -->
+  <div class="panel" id="tab-waypoints">
+    <div class="grid2">
+      <div class="card">
+        <h3>➕ Add / Update Waypoint</h3>
+        <label><span>Name</span><input id="wp-name" type="text" placeholder="office_desk"></label>
+        <label><span>Type</span>
+          <select id="wp-type">
+            <option value="delivery">delivery</option>
+            <option value="charger">charger</option>
+            <option value="avoid">avoid</option>
+            <option value="custom">custom</option>
+          </select>
+        </label>
+        <label><span>X (m)</span><input id="wp-x" type="number" value="0" step="0.1"></label>
+        <label><span>Y (m)</span><input id="wp-y" type="number" value="0" step="0.1"></label>
+        <label><span>Yaw (rad)</span><input id="wp-yaw" type="number" value="0" step="0.05"></label>
+        <div class="btns">
+          <button class="btn-p" onclick="addWaypoint()">💾 Save</button>
+          <button class="btn-sm" onclick="fillWpFromPose()">📍 Current Pose</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>📍 Waypoints <button class="btn-sm" onclick="loadWaypoints()">🔄</button></h3>
+        <table>
+          <thead><tr><th>Name</th><th>Type</th><th>X</th><th>Y</th><th>Yaw</th><th></th></tr></thead>
+          <tbody id="wp-tbody"><tr><td colspan="6" style="color:var(--muted)">No waypoints</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ROUTE ── -->
+  <div class="panel" id="tab-route">
+    <div class="grid2">
+      <div class="card">
+        <h3>✏️ Create / Update Route</h3>
+        <label><span>Name</span><input id="rt-name" type="text" placeholder="patrol_warehouse"></label>
+        <label style="flex-direction:row;align-items:center;gap:6px;display:flex">
+          <input type="checkbox" id="rt-loop" style="width:auto">
+          <span>Loop continuously</span>
+        </label>
+        <label style="margin-top:8px"><span>Waypoints JSON array</span>
+          <textarea id="rt-json" rows="7" placeholder='[
+  {"name":"P1","x":2.0,"y":1.0,"yaw":0.0},
+  {"name":"P2","x":5.0,"y":3.0,"yaw":1.57}
+]'></textarea>
+        </label>
+        <div class="btns">
+          <button class="btn-p" onclick="saveRoute()">💾 Save Route</button>
+          <button class="btn-sm" onclick="fillRouteFromWp()">From Waypoints</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>📋 Routes <button class="btn-sm" onclick="loadRoutes()">🔄</button></h3>
+        <div id="route-list" style="color:var(--muted)">—</div>
+        <hr>
+        <h3 style="margin-top:0">▶️ Patrol Control</h3>
+        <label><span>Select route</span>
+          <select id="rt-sel"><option value="">-- select --</option></select>
+        </label>
+        <div class="btns">
+          <button class="btn-p" onclick="startPatrol()">▶ Start Patrol</button>
+          <button class="btn-d" onclick="stopPatrol()">■ Stop</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CUSTOM ── -->
+  <div class="panel" id="tab-custom">
+    <div class="grid2">
+      <div class="card">
+        <h3>🔧 Custom API Request</h3>
+        <label><span>Method &amp; Path</span>
+          <div style="display:flex;gap:6px">
+            <select id="req-method" style="width:90px">
+              <option>GET</option><option>POST</option><option>DELETE</option>
+            </select>
+            <input id="req-path" type="text" value="/atlas/status">
+          </div>
+        </label>
+        <label><span>Body (JSON, for POST)</span>
+          <textarea id="req-body" rows="5" placeholder='{"key":"value"}'></textarea>
+        </label>
+        <button class="btn-p" onclick="sendCustom()">▶ Send</button>
+        <div id="req-result">Response will appear here…</div>
+      </div>
+      <div class="card">
+        <h3>⚡ Quick GET</h3>
+        <div id="quick-btns" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+<div id="toast"></div>
+
+<!-- ══ SCRIPT ══ -->
+<script>
+'use strict';
+
+// ─ Config ───────────────────────────────────────────────────────────
+let HOST = document.getElementById('rest-host').value;
+const wsPort = () => HOST.replace(/:\d+$/, ':9090');
+
+function onHostChange() { HOST = document.getElementById('rest-host').value; connectWS(); }
+
+// ─ Helpers ──────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const setText = (id, v) => { const e=$(id); if(e) e.textContent=v; };
+const n3 = v => (v==null?'0.000':parseFloat(v).toFixed(3));
+
+function toast(msg, type='ok') {
+  const el = document.createElement('div');
+  el.className = `t-msg t-${type}`;
+  el.textContent = msg;
+  $('toast').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+async function api(method, path, body) {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  try {
+    const r = await fetch(`http://${HOST}${path}`, opts);
+    const j = await r.json();
+    return { ok: r.ok, status: r.status, data: j };
+  } catch(e) {
+    return { ok: false, status: 0, data: {error: e.message} };
+  }
+}
+
+// ─ WebSocket ────────────────────────────────────────────────────────
+let ws = null, wsRetry = null, _last = {};
+
+function connectWS() {
+  if (ws) { try { ws.close(); } catch(_){} }
+  ws = new WebSocket(`ws://${wsPort()}`);
+  ws.onopen  = () => { setDot('green','connected'); clearTimeout(wsRetry); };
+  ws.onclose = () => { setDot('red','disconnected'); wsRetry = setTimeout(connectWS, 3000); };
+  ws.onerror = () => setDot('yellow','error');
+  ws.onmessage = ({data}) => {
+    try {
+      const msg = JSON.parse(data);
+      if (msg.type === 'status') { _last = msg; applyStatus(msg); }
+    } catch(_){}
+  };
+}
+
+function setDot(color, label) {
+  $('ws-dot').className = `dot ${color}`;
+  $('ws-lbl').textContent = `WS ${label}`;
+}
+
+// ─ Status update ────────────────────────────────────────────────────
+function applyStatus(s) {
+  // ── status bar
+  const bat = +(s.battery ?? 0);
+  setText('sb-bat', `${bat.toFixed(1)}%`);
+  const fill = $('bat-fill');
+  fill.style.width = `${Math.min(bat,100)}%`;
+  fill.style.background = bat>40 ? 'var(--green)' : bat>20 ? 'var(--yellow)' : 'var(--red)';
+
+  const imuEl = $('sb-imu');
+  imuEl.textContent = s.imu ?? '--';
+  imuEl.className = `val ${s.imu==='ok'?'ok':'err'}`;
+
+  const eEl = $('sb-estop');
+  if (s.emergency_stop) { eEl.textContent='ON';  eEl.className='val err'; }
+  else                   { eEl.textContent='OFF'; eEl.className='val ok'; }
+
+  const modeMap = {1:'Mapping',2:'Navigation',3:'Inc.Mapping'};
+  setText('sb-mode', modeMap[s.mode]??'--');
+
+  const p = s.pose ?? {};
+  setText('sb-pose', `x:${n3(p.x)} y:${n3(p.y)} θ:${n3(p.yaw)}`);
+  setText('sb-speed', `${n3(s.linear_speed)} m/s`);
+
+  // ── status tab
+  const dbat = $('d-bat');
+  dbat.textContent = `${bat.toFixed(1)}%`;
+  dbat.className = `big ${bat>40?'ok':bat>20?'warn':'err'}`;
+  setText('d-volt', `${(+(s.voltage??0)).toFixed(2)} V`);
+  setText('d-chg',  chargeLabel(s.charge_flag));
+  const de=$('d-estop2');
+  if(s.emergency_stop){de.textContent='ON';de.className='v err';}
+  else{de.textContent='OFF';de.className='v ok';}
+
+  setText('d-x',   `${n3(p.x)} m`);
+  setText('d-y',   `${n3(p.y)} m`);
+  setText('d-yaw', `${n3(p.yaw)} rad`);
+  setText('d-vx',  `${n3(s.linear_speed)} m/s`);
+  setText('d-wz',  `${n3(s.angular_speed)} rad/s`);
+
+  // nav badge
+  const state = s.nav_state ?? 'idle';
+  setBadge('sb-nav', state);
+  setBadge('d-nav-badge', state);
+}
+
+function chargeLabel(f) {
+  return ({0:'Discharging',1:'Full / Standby',2:'Charging (pile)',3:'Charging (adapter)',8:'Docking'})[f] ?? '--';
+}
+
+function setBadge(id, state) {
+  const e = $(id); if(!e) return;
+  e.textContent = state;
+  e.className = `badge b-${state}`;
+}
+
+// ─ Poll IMU separately ──────────────────────────────────────────────
+async function pollIMU() {
+  const r = await api('GET', '/atlas/chassis/imu');
+  if (!r.ok) return;
+  const a = r.data.acceleration ?? {}, g = r.data.gyroscope ?? {};
+  setText('d-ax', n3(a.x)); setText('d-ay', n3(a.y)); setText('d-az', n3(a.z));
+  setText('d-gx', n3(g.x)); setText('d-gy', n3(g.y)); setText('d-gz', n3(g.z));
+}
+
+// ─ Fallback REST poll ───────────────────────────────────────────────
+async function pollStatus() {
+  if (ws && ws.readyState === 1) return;
+  const r = await api('GET', '/atlas/status');
+  if (r.ok) { _last = r.data; applyStatus(r.data); }
+}
+
+// ─ Tabs ─────────────────────────────────────────────────────────────
+function showTab(btn) {
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  $('tab-'+btn.dataset.tab).classList.add('active');
+  const t = btn.dataset.tab;
+  if (t==='map')       { refreshMap(); loadMapList(); }
+  if (t==='waypoints') { loadWaypoints(); }
+  if (t==='navigate')  { loadWpForNav(); refreshNavStatus(); }
+  if (t==='route')     { loadRoutes(); }
+  if (t==='custom')    { buildQuickBtns(); }
+}
+
+// ─ Control ──────────────────────────────────────────────────────────
+let _holdTimer=null, _heldBtn=null;
+
+function holdStart(dir) {
+  _heldBtn = dir;
+  sendDir(dir);
+  _holdTimer = setInterval(()=>sendDir(dir), 80);
+  document.getElementById('btn-'+dir2id(dir))?.classList.add('held');
+}
+
+function holdEnd() {
+  clearInterval(_holdTimer); _holdTimer=null;
+  if (_heldBtn) document.getElementById('btn-'+dir2id(_heldBtn))?.classList.remove('held');
+  _heldBtn = null;
+  stopRobot();
+}
+
+function dir2id(d) { return {fwd:'fwd',bwd:'bwd',rl:'rot-l',rr:'rot-r',sl:'str-l',sr:'str-r'}[d]??d; }
+
+function sendDir(dir) {
+  const spd = parseFloat($('spd-slider').value);
+  const w   = spd * 1.6;
+  const map = { fwd:[spd,0,0], bwd:[-spd,0,0], rl:[0,0,w], rr:[0,0,-w], sl:[0,spd,0], sr:[0,-spd,0] };
+  const [vx,vy,wz] = map[dir] ?? [0,0,0];
+  api('POST','/atlas/chassis/move',{vx,vy,wz});
+  $('ctrl-status').textContent = `Sending: vx=${vx.toFixed(2)} vy=${vy.toFixed(2)} wz=${wz.toFixed(2)}`;
+}
+
+function stopRobot() {
+  api('POST','/atlas/chassis/move',{vx:0,vy:0,wz:0});
+  $('ctrl-status').textContent = 'Stopped';
+}
+
+// Keyboard
+const KEY_DIR={w:'fwd',s:'bwd',a:'rl',d:'rr',q:'sl',e:'sr'};
+const _pressed=new Set(); let _kbTimer=null;
+
+document.addEventListener('keydown', ev=>{
+  if(['INPUT','TEXTAREA','SELECT'].includes(ev.target.tagName)) return;
+  if(ev.key===' '){ev.preventDefault();stopRobot();return;}
+  const dir=KEY_DIR[ev.key.toLowerCase()];
+  if(!dir) return;
+  ev.preventDefault();
+  if(!_pressed.has(dir)){_pressed.add(dir);if(!_kbTimer)_kbTimer=setInterval(sendKeys,80);}
+});
+document.addEventListener('keyup', ev=>{
+  const dir=KEY_DIR[ev.key.toLowerCase()];
+  if(!dir) return;
+  _pressed.delete(dir);
+  if(!_pressed.size){clearInterval(_kbTimer);_kbTimer=null;stopRobot();}
+});
+function sendKeys(){
+  const spd=parseFloat($('spd-slider').value); const w=spd*1.6;
+  let vx=0,vy=0,wz=0;
+  if(_pressed.has('fwd'))vx+=spd; if(_pressed.has('bwd'))vx-=spd;
+  if(_pressed.has('sl'))vy+=spd;  if(_pressed.has('sr'))vy-=spd;
+  if(_pressed.has('rl'))wz+=w;    if(_pressed.has('rr'))wz-=w;
+  api('POST','/atlas/chassis/move',{vx,vy,wz});
+}
+
+// ─ Navigate ─────────────────────────────────────────────────────────
+async function navGoal() {
+  const r = await api('POST','/atlas/nav/goal',{
+    x:parseFloat($('nav-x').value), y:parseFloat($('nav-y').value), yaw:parseFloat($('nav-yaw').value)
+  });
+  r.ok ? toast('Navigation started ▶') : toast(r.data?.message??'Error','err');
+  refreshNavStatus();
+}
+
+async function navGoalName() {
+  const name=$('nav-wp-sel').value;
+  if(!name){toast('Select a waypoint','err');return;}
+  const r=await api('POST','/atlas/nav/goal_name',{name});
+  r.ok ? toast(`Navigating to "${name}"`) : toast(r.data?.message??'Error','err');
+  refreshNavStatus();
+}
+
+async function navCancel() {
+  await api('POST','/atlas/nav/cancel',{});
+  toast('Navigation cancelled','info');
+  refreshNavStatus();
+}
+
+async function relocate() {
+  const r=await api('POST','/atlas/nav/relocate',{
+    x:parseFloat($('rel-x').value), y:parseFloat($('rel-y').value), yaw:parseFloat($('rel-yaw').value)
+  });
+  r.ok ? toast('Initial pose set 📍') : toast(r.data?.message??'Error','err');
+}
+
+function fillRelFromPose(){
+  const p=_last.pose??{};
+  $('rel-x').value=n3(p.x); $('rel-y').value=n3(p.y); $('rel-yaw').value=n3(p.yaw);
+  toast('Filled from current pose','info');
+}
+
+async function refreshNavStatus() {
+  const r=await api('GET','/atlas/nav/status');
+  if(!r.ok) return;
+  const s=r.data.state??'idle';
+  const g=r.data.current_goal;
+  setBadge('nav-badge',s); setBadge('sb-nav',s); setBadge('d-nav-badge',s);
+  const txt = g ? `x:${n3(g.x)}  y:${n3(g.y)}  yaw:${n3(g.yaw)}` : '--';
+  setText('nav-goal-text', txt);
+  setText('d-nav-goal', txt);
+}
+
+async function loadWpForNav() {
+  const r=await api('GET','/atlas/waypoints');
+  if(!r.ok) return;
+  const sel=$('nav-wp-sel');
+  sel.innerHTML='<option value="">-- select waypoint --</option>';
+  (r.data.waypoints??[]).forEach(wp=>{
+    const o=document.createElement('option');
+    o.value=wp.name; o.textContent=`${wp.name}  (${wp.type})`;
+    sel.appendChild(o);
+  });
+}
+
+// ─ Map ──────────────────────────────────────────────────────────────
+let _mapAutoTimer=null;
+
+async function refreshMap() {
+  const r=await api('GET','/atlas/map');
+  if(r.ok && r.data.width) {
+    const m=r.data;
+    $('map-meta').textContent=`${m.width}×${m.height} px  |  ${m.resolution} m/px  |  alias: ${m.alias||'—'}  |  origin: (${n3(m.origin?.x)}, ${n3(m.origin?.y)})`;
+  }
+  $('map-img').src=`http://${HOST}/atlas/map/image?_=${Date.now()}`;
+}
+
+function toggleMapAuto(){
+  const on=$('map-auto').checked;
+  if(on){_mapAutoTimer=setInterval(refreshMap,5000);refreshMap();}
+  else {clearInterval(_mapAutoTimer);_mapAutoTimer=null;}
+}
+
+async function saveMap(){
+  const alias=$('map-alias').value.trim()||'unnamed';
+  const r=await api('POST','/atlas/map/save',{alias});
+  r.ok ? (toast(`Map saved: ${r.data.name.slice(0,12)}…`),loadMapList()) : toast(r.data?.message??'Save failed','err');
+}
+
+async function loadMapList(){
+  const r=await api('GET','/atlas/map/list');
+  const el=$('map-list'); if(!r.ok){el.textContent='Error';return;}
+  const maps=r.data.maps??[];
+  if(!maps.length){el.innerHTML='<span style="color:var(--muted)">No saved maps</span>';return;}
+  el.innerHTML=maps.map(m=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <span style="font-weight:500">${m.alias||'(unnamed)'}</span>
+        <span style="color:var(--muted);font-size:11px;margin-left:6px">${m.name.slice(0,14)}…</span>
+      </div>
+      <div style="display:flex;gap:4px">
+        <button class="btn-sm" onclick="applyMap('${m.name}')">Apply</button>
+        <button class="btn-sm" style="color:var(--red)" onclick="deleteMap('${m.name}')">Del</button>
+      </div>
+    </div>`).join('');
+}
+
+async function applyMap(name){
+  const r=await api('POST','/atlas/map/apply',{name});
+  r.ok ? toast('Map applied ✓') : toast(r.data?.message??'Error','err');
+}
+
+async function deleteMap(name){
+  if(!confirm(`Delete map ${name.slice(0,14)}…?`)) return;
+  const r=await api('DELETE',`/atlas/map/${name}`);
+  r.ok ? (toast('Deleted'),loadMapList()) : toast(r.data?.message??'Error','err');
+}
+
+// ─ Waypoints ────────────────────────────────────────────────────────
+async function loadWaypoints(){
+  const r=await api('GET','/atlas/waypoints');
+  const tbody=$('wp-tbody');
+  if(!r.ok){tbody.innerHTML='<tr><td colspan="6">Error loading</td></tr>';return;}
+  const wps=r.data.waypoints??[];
+  if(!wps.length){tbody.innerHTML='<tr><td colspan="6" style="color:var(--muted)">No waypoints</td></tr>';return;}
+  tbody.innerHTML=wps.map(w=>`
+    <tr>
+      <td><strong>${w.name}</strong></td>
+      <td style="color:var(--muted)">${w.type}</td>
+      <td>${n3(w.x)}</td><td>${n3(w.y)}</td><td>${n3(w.yaw)}</td>
+      <td style="display:flex;gap:3px">
+        <button class="btn-sm" onclick="editWp('${w.name}',${w.x},${w.y},${w.yaw},'${w.type}')">Edit</button>
+        <button class="btn-sm" style="color:var(--red)" onclick="delWp('${w.name}')">Del</button>
+      </td>
+    </tr>`).join('');
+}
+
+function editWp(name,x,y,yaw,type){
+  $('wp-name').value=name; $('wp-x').value=x; $('wp-y').value=y;
+  $('wp-yaw').value=yaw; $('wp-type').value=type;
+  window.scrollTo(0,0);
+}
+
+async function addWaypoint(){
+  const name=$('wp-name').value.trim();
+  if(!name){toast('Name required','err');return;}
+  const r=await api('POST','/atlas/waypoints',{
+    name, type:$('wp-type').value,
+    x:parseFloat($('wp-x').value), y:parseFloat($('wp-y').value), yaw:parseFloat($('wp-yaw').value)
+  });
+  r.ok ? (toast(`"${name}" saved ✓`),loadWaypoints(),loadWpForNav()) : toast(r.data?.message??'Error','err');
+}
+
+async function delWp(name){
+  if(!confirm(`Delete "${name}"?`)) return;
+  const r=await api('DELETE',`/atlas/waypoints/${name}`);
+  r.ok ? (toast('Deleted'),loadWaypoints()) : toast(r.data?.message??'Error','err');
+}
+
+function fillWpFromPose(){
+  const p=_last.pose??{};
+  $('wp-x').value=n3(p.x); $('wp-y').value=n3(p.y); $('wp-yaw').value=n3(p.yaw);
+  toast('Pose filled from current position','info');
+}
+
+// ─ Routes ───────────────────────────────────────────────────────────
+async function loadRoutes(){
+  const r=await api('GET','/atlas/route/list');
+  const el=$('route-list'), sel=$('rt-sel');
+  if(!r.ok){el.textContent='Error';return;}
+  const routes=r.data.routes??[];
+  if(!routes.length){el.innerHTML='<span style="color:var(--muted)">No routes</span>';sel.innerHTML='<option value="">-- no routes --</option>';return;}
+  el.innerHTML=routes.map(name=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="font-weight:500">${name}</span>
+      <button class="btn-sm" style="color:var(--red)" onclick="delRoute('${name}')">Del</button>
+    </div>`).join('');
+  sel.innerHTML=routes.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+
+async function saveRoute(){
+  const name=$('rt-name').value.trim();
+  if(!name){toast('Name required','err');return;}
+  let waypoints;
+  try{waypoints=JSON.parse($('rt-json').value);}catch{toast('Invalid JSON','err');return;}
+  const r=await api('POST','/atlas/route',{name,loop:$('rt-loop').checked,waypoints});
+  r.ok ? (toast(`Route "${name}" saved ✓`),loadRoutes()) : toast(r.data?.message??'Error','err');
+}
+
+async function delRoute(name){
+  if(!confirm(`Delete route "${name}"?`)) return;
+  const r=await api('DELETE',`/atlas/route/${name}`);
+  r.ok ? (toast('Deleted'),loadRoutes()) : toast(r.data?.message??'Error','err');
+}
+
+async function startPatrol(){
+  const name=$('rt-sel').value;
+  if(!name){toast('Select a route','err');return;}
+  const r=await api('POST','/atlas/route/start',{name});
+  r.ok ? toast(`Patrol started: ${name} ▶`) : toast(r.data?.message??'Error','err');
+}
+
+async function stopPatrol(){
+  const r=await api('POST','/atlas/route/stop',{});
+  r.ok ? toast('Patrol stopped ■','info') : toast('Error','err');
+}
+
+async function fillRouteFromWp(){
+  const r=await api('GET','/atlas/waypoints');
+  if(!r.ok) return;
+  const wps=(r.data.waypoints??[]).map(w=>({name:w.name,x:w.x,y:w.y,yaw:w.yaw}));
+  $('rt-json').value=JSON.stringify(wps,null,2);
+}
+
+// ─ Custom ───────────────────────────────────────────────────────────
+async function sendCustom(){
+  const method=$('req-method').value, path=$('req-path').value;
+  let body;
+  const raw=$('req-body').value.trim();
+  if(raw){try{body=JSON.parse(raw);}catch{toast('Invalid JSON body','err');return;}}
+  const r=await api(method,path,body);
+  $('req-result').textContent=JSON.stringify(r.data,null,2);
+  $('req-result').style.color=r.ok?'var(--green)':'var(--red)';
+}
+
+const QUICK_GETS=[
+  '/atlas/status','/atlas/version','/atlas/mode','/atlas/hostname',
+  '/atlas/chassis/pose','/atlas/chassis/speed','/atlas/chassis/imu',
+  '/atlas/chassis/battery','/atlas/chassis/laser',
+  '/atlas/nav/status','/atlas/map/current','/atlas/map/list',
+  '/atlas/waypoints','/atlas/route/list','/atlas/virtual_wall',
+  '/atlas/special_area','/atlas/settings',
+];
+
+function buildQuickBtns(){
+  const el=$('quick-btns');
+  if(el.children.length) return;
+  QUICK_GETS.forEach(path=>{
+    const b=document.createElement('button');
+    b.className='btn-sm'; b.textContent=path;
+    b.onclick=()=>{$('req-method').value='GET';$('req-path').value=path;sendCustom();};
+    el.appendChild(b);
+  });
+}
+
+// ─ Init ─────────────────────────────────────────────────────────────
+connectWS();
+buildQuickBtns();
+pollIMU();
+refreshNavStatus();
+
+setInterval(pollStatus,  3000);
+setInterval(pollIMU,     2000);
+setInterval(refreshNavStatus, 4000);
+</script>
+</body>
+</html>
