@@ -6,14 +6,9 @@ from ament_index_python.packages import get_package_share_directory
 import os
 
 def generate_launch_description():
-    # a1 simulation
-    a1_simulation = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(
-            get_package_share_directory('a1_description'),
-            'launch',
-            'a1_simulation.launch.py'
-        ))
-    )
+    # a1 controller
+    
+    # a1 laser
 
     # a1 laser filter
     a1_laser_filter = IncludeLaunchDescription(
@@ -33,15 +28,6 @@ def generate_launch_description():
         ))
     )
 
-    # a1 fake status
-    a1_fake_status = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(
-            get_package_share_directory('a1_bringup'),
-            'launch',
-            'a1_fake_status.launch.py'
-        ))
-    )
-
     # Relay /odom → /atlas/odom
     odom_relay = Node(
         package='topic_tools',
@@ -53,19 +39,17 @@ def generate_launch_description():
     )
     
     # Atlas API
-    atlas_api = Node(
-        package='atlas_api',
-        executable='atlas_api',
-        name='atlas_api',
-        output='screen',
-        # parameters=[{'use_sim_time': True}]
+    atlas_api = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(
+            get_package_share_directory('atlas_api'),
+            'launch',
+            'atlas_api.launch.py'
+        ))
     )
 
     return LaunchDescription([
-        a1_simulation,
         a1_laser_filter,
         a1_joystick,
-        a1_fake_status,
         odom_relay,
         atlas_api
     ])

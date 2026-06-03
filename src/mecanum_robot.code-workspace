@@ -1,0 +1,10 @@
+{
+	"folders": [
+		{
+			"path": "../../mecanum_robot"
+		},
+		{
+			"path": ".."
+		}
+	]
+}

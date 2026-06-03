@@ -186,11 +186,15 @@ local_costmap:
       resolution: 0.05
       # footprint: "[ [-0.2, -0.15], [-0.2, 0.15], [0.2, 0.15], [0.2, -0.15] ]"
       robot_radius: 0.3
-      plugins: ["obstacle_layer", "voxel_layer", "inflation_layer"]
+      plugins: ["obstacle_layer", "voxel_layer", "keepout_filter", "inflation_layer"]
+      keepout_filter:
+        plugin: "nav2_costmap_2d::KeepoutFilter"
+        enabled: True
+        filter_info_topic: "/keepout_filter_info"
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 10.0  # Tăng cost_scaling_factor để robot tránh xa chướng ngại vật hơn
-        inflation_radius: 0.35  # Tăng inflation_radius để vùng phình to hơn
+        cost_scaling_factor: 10.0
+        inflation_radius: 0.35
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
@@ -236,7 +240,16 @@ global_costmap:
       robot_base_frame: base_link
       robot_radius: 0.3 # radius set and used, so no footprint points
       resolution: 0.05
-      plugins: ["static_layer", "obstacle_layer", "voxel_layer", "inflation_layer"]
+      plugins: ["static_layer", "obstacle_layer", "voxel_layer", "keepout_filter", "speed_filter", "inflation_layer"]
+      keepout_filter:
+        plugin: "nav2_costmap_2d::KeepoutFilter"
+        enabled: True
+        filter_info_topic: "/keepout_filter_info"
+      speed_filter:
+        plugin: "nav2_costmap_2d::SpeedFilter"
+        enabled: True
+        filter_info_topic: "/speed_filter_info"
+        speed_limit_topic: "/speed_limit"
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
@@ -256,16 +269,7 @@ global_costmap:
           marking: True
           data_type: "LaserScan"
           inf_is_valid: false
-      # virtual_layer:
-      #   plugin: "nav2_virtual_layer::VirtualLayer"
-      #   enabled: true
-      #   map_frame: map
-      #   line_thickness: 0.03
-      #   default_cost_level: 254
-      #   enable_visualization: true
-      #   forms_file: "package://h1_slam/config/virtual_layer.yaml"
-         # forms_file: "package://nav2_virtual_layer/config/virtual_layer_forms.yaml"
-         # forms_file: "package://nav2_virtual_layer/config/virtual_layer_forms_legacy.yaml"
+      
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True

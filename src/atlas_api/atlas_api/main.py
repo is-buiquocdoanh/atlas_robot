@@ -16,6 +16,7 @@ import rclpy
 from rclpy.executors import MultiThreadedExecutor
 
 from . import ros_node, ws_server
+from . import launch_manager as lm_module
 from .app import create_app
 
 logging.basicConfig(
@@ -34,6 +35,7 @@ def main(args=None):
 
     # 1 ── ROS node + executor ──────────────────────────────────────────────
     node = ros_node.init_node()
+    lm_module.init_launch_manager(node.get_logger())
     executor = MultiThreadedExecutor(num_threads=4)
     executor.add_node(node)
 
@@ -49,10 +51,14 @@ def main(args=None):
 
     # 3 ── Status broadcast timer ───────────────────────────────────────────
     def _broadcast_loop():
+        from .routes.map_api import get_current_map_info
         interval = 1.0 / _BC_HZ
         while rclpy.ok():
             try:
-                ws_server.broadcast({'type': 'status', **node.get_status()})
+                status = node.get_status()
+                cm = get_current_map_info()
+                status['current_map'] = cm.get('alias') or cm.get('name', '')
+                ws_server.broadcast({'type': 'status', **status})
             except Exception as e:
                 log.debug('broadcast error: %s', e)
             time.sleep(interval)

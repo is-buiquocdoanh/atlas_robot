@@ -16,33 +16,40 @@ window.MapEngine = (() => {
 
   /* ── State ────────────────────────────────────────────────────────────── */
   let _canvas, _ctx, _bg;
-  let _meta   = null;   // {width,height,resolution,origin:{x,y}}
-  let _zoom   = 1.0;
-  let _panX   = 0, _panY = 0;
+  let _meta     = null;   // {width,height,resolution,origin:{x,y}}
+  let _metaKey  = '';     // hash of meta to detect real map changes
+  let _zoom     = 1.0;
+  let _panX     = 0, _panY = 0;
 
   // Robot state
   let _pose  = { x: 0, y: 0, yaw: 0 };
-  let _laser = [];          // [{x,y}] world coords (converted from API pixel-offsets)
+  let _laser = [];          // [{x,y}] world coords
 
   // Overlays
   let _waypoints  = [];   // [{name,type,x,y,yaw}]
   let _routes     = [];   // [{name,waypoints:[{x,y,yaw}]}]
   let _walls      = [];   // [{id,points:[{x,y}]}]  world coords
   let _areas      = [];   // [{id,name,type,speed,polygon:[{x,y}]}]  world coords
-  let _goalWorld  = null; // {x,y} or null
-  let _path       = [];   // [{x,y}] world
+  let _goalWorld  = null; // {x,y,yaw} or null
+  let _navPath    = [];   // [[x,y],…] global planner path from nav2
 
   // Active tool
   let _tool   = 'nav';    // 'pan'|'nav'|'relocate'|'position'|'wall'|'area'|'measure'
-  let _toolCb = null;     // called when tool action completes: fn(worldPos) or fn(points)
+  let _toolCb = null;     // called when tool action completes: fn(worldPos, yaw) or fn(points)
 
   // Drawing in progress
-  let _drawPts  = [];     // points being drawn
+  let _drawPts   = [];    // points being drawn
   let _drawMouse = null;  // current mouse world pos while drawing
-  let _measureA = null, _measureB = null;
+  let _measureA  = null, _measureB = null;
+
+  // Nav goal drag (click + drag to set position + yaw)
+  let _navDrag = null;    // {startWorld, startCx, startCy, currentWorld, moved, tool}
+
+  // Temporary preview waypoint shown on map while position-picking (before save)
+  let _previewWp = null;  // {x, y, yaw} or null
 
   // Pan drag
-  let _drag = null;       // {startX,startY,panX0,panY0}
+  let _drag = null;       // {sx,sy,px0,py0}
 
   // Callbacks
   let _onContext = null;  // fn(worldPos, canvasPos)
@@ -132,9 +139,8 @@ window.MapEngine = (() => {
     _ctx.clearRect(0, 0, W, H);
 
     if (!_meta) {
-      _ctx.fillStyle = '#1f2937';
-      _ctx.font = '14px sans-serif';
       _ctx.fillStyle = '#6b7280';
+      _ctx.font = '14px sans-serif';
       _ctx.textAlign = 'center';
       _ctx.fillText('Waiting for map…', W/2, H/2);
       _ctx.textAlign = 'left';
@@ -152,9 +158,12 @@ window.MapEngine = (() => {
     _drawAreas();
     _drawWalls();
     _drawRoutes();
+    _drawNavPath();
     _drawLaser();
     _drawGoal();
+    _drawNavDrag();
     _drawWaypoints();
+    _drawPreviewWp();
     _drawRobot();
     _drawDrawingInProgress();
     _drawMeasure();
@@ -162,6 +171,50 @@ window.MapEngine = (() => {
   }
 
   /* ── Overlay draws ────────────────────────────────────────────────────── */
+  function _drawNavPath() {
+    if (_navPath.length < 2) return;
+    _ctx.save();
+
+    // Gradient along path: green → cyan
+    const first = _worldToCanvas(_navPath[0][0], _navPath[0][1]);
+    const last  = _worldToCanvas(_navPath[_navPath.length-1][0], _navPath[_navPath.length-1][1]);
+    const grad  = _ctx.createLinearGradient(first.x, first.y, last.x, last.y);
+    grad.addColorStop(0,   'rgba(34,197,94,.9)');
+    grad.addColorStop(0.5, 'rgba(16,185,129,.75)');
+    grad.addColorStop(1,   'rgba(6,182,212,.6)');
+
+    _ctx.strokeStyle = grad;
+    _ctx.lineWidth   = Math.max(1.5, 2.5 * Math.min(_zoom, 1.2));
+    _ctx.lineJoin    = 'round';
+    _ctx.lineCap     = 'round';
+    _ctx.globalAlpha = 0.85;
+    _ctx.beginPath();
+    _navPath.forEach((pt, i) => {
+      const c = _worldToCanvas(pt[0], pt[1]);
+      i === 0 ? _ctx.moveTo(c.x, c.y) : _ctx.lineTo(c.x, c.y);
+    });
+    _ctx.stroke();
+
+    // Direction arrows every N points
+    _ctx.globalAlpha = 0.7;
+    _ctx.fillStyle   = 'rgba(34,197,94,.8)';
+    const arrowEvery = Math.max(10, Math.floor(_navPath.length / 15));
+    for (let i = arrowEvery; i < _navPath.length - 1; i += arrowEvery) {
+      const c  = _worldToCanvas(_navPath[i][0], _navPath[i][1]);
+      const c2 = _worldToCanvas(_navPath[i+1][0], _navPath[i+1][1]);
+      const ang = Math.atan2(c2.y - c.y, c2.x - c.x);
+      const ah  = 5 * Math.min(_zoom, 1.5);
+      _ctx.beginPath();
+      _ctx.moveTo(c.x + ah*Math.cos(ang), c.y + ah*Math.sin(ang));
+      _ctx.lineTo(c.x + ah*Math.cos(ang + 2.4), c.y + ah*Math.sin(ang + 2.4));
+      _ctx.lineTo(c.x + ah*Math.cos(ang - 2.4), c.y + ah*Math.sin(ang - 2.4));
+      _ctx.closePath();
+      _ctx.fill();
+    }
+
+    _ctx.restore();
+  }
+
   function _drawRobot() {
     const { x, y } = _worldToCanvas(_pose.x, _pose.y);
     const yaw = _pose.yaw;
@@ -169,7 +222,8 @@ window.MapEngine = (() => {
 
     _ctx.save();
     _ctx.translate(x, y);
-    _ctx.rotate(-yaw);  // ROS CCW → canvas CW
+    // yaw=0 → robot faces +x world (right on screen); canvas Y is flipped → rotate(-yaw)
+    _ctx.rotate(-yaw);
 
     // Glow
     const grad = _ctx.createRadialGradient(0,0,0, 0,0,s*2);
@@ -180,12 +234,12 @@ window.MapEngine = (() => {
     _ctx.fillStyle = grad;
     _ctx.fill();
 
-    // Arrow
+    // Arrow pointing RIGHT (+x direction) so yaw=0 → facing right ✓
     _ctx.beginPath();
-    _ctx.moveTo(0, -s);
-    _ctx.lineTo(-s*.65, s*.75);
-    _ctx.lineTo(0, s*.3);
-    _ctx.lineTo(s*.65, s*.75);
+    _ctx.moveTo(s, 0);           // tip → right
+    _ctx.lineTo(-s*.65, -s*.75); // back-top
+    _ctx.lineTo(-s*.3, 0);       // back-notch
+    _ctx.lineTo(-s*.65,  s*.75); // back-bottom
     _ctx.closePath();
     _ctx.fillStyle = '#2563eb';
     _ctx.fill();
@@ -202,18 +256,12 @@ window.MapEngine = (() => {
 
   function _drawLaser() {
     if (!_laser.length) return;
-    _ctx.fillStyle = 'rgba(6,182,212,.7)';
-    _laser.forEach(pt => {
-      const c = _worldToCanvas(pt.x, pt.y);
-      _ctx.beginPath();
-      _ctx.arc(c.x, c.y, Math.max(1, 1.5 * _zoom), 0, Math.PI*2);
-      _ctx.fill();
-    });
-    // Scan lines (subtle)
     const rob = _worldToCanvas(_pose.x, _pose.y);
-    _ctx.strokeStyle = 'rgba(6,182,212,.05)';
+
+    // Scan lines (subtle fan)
+    _ctx.strokeStyle = 'rgba(6,182,212,.06)';
     _ctx.lineWidth = .5;
-    const step = Math.max(1, Math.floor(_laser.length / 80));
+    const step = Math.max(1, Math.floor(_laser.length / 120));
     _laser.forEach((pt, i) => {
       if (i % step) return;
       const c = _worldToCanvas(pt.x, pt.y);
@@ -221,6 +269,16 @@ window.MapEngine = (() => {
       _ctx.moveTo(rob.x, rob.y);
       _ctx.lineTo(c.x, c.y);
       _ctx.stroke();
+    });
+
+    // Hit points
+    _ctx.fillStyle = 'rgba(6,182,212,.8)';
+    const ptR = Math.max(1.2, 1.8 * _zoom);
+    _laser.forEach(pt => {
+      const c = _worldToCanvas(pt.x, pt.y);
+      _ctx.beginPath();
+      _ctx.arc(c.x, c.y, ptR, 0, Math.PI*2);
+      _ctx.fill();
     });
   }
 
@@ -331,8 +389,8 @@ window.MapEngine = (() => {
     const rob = _worldToCanvas(_pose.x, _pose.y);
     const g   = _worldToCanvas(_goalWorld.x, _goalWorld.y);
 
-    // Line from robot to goal
     _ctx.save();
+    // Dashed line robot → goal
     _ctx.strokeStyle = 'rgba(234,179,8,.5)';
     _ctx.lineWidth = 1.5;
     _ctx.setLineDash([5,5]);
@@ -342,11 +400,144 @@ window.MapEngine = (() => {
     _ctx.stroke();
     _ctx.setLineDash([]);
 
-    // Star
-    _drawStar(_ctx, g.x, g.y, 10 * Math.min(_zoom, 1.5), '#eab308');
+    // Arrow at goal showing heading (yaw=0 when not set → point right)
+    const as = 14 * Math.min(_zoom, 1.5);
+    const goalYaw = _goalWorld.yaw ?? 0;
+    _ctx.save();
+    _ctx.translate(g.x, g.y);
+    _ctx.rotate(-goalYaw);
+    _ctx.beginPath();
+    _ctx.moveTo(as, 0);
+    _ctx.lineTo(-as*.65, -as*.75);
+    _ctx.lineTo(-as*.3, 0);
+    _ctx.lineTo(-as*.65,  as*.75);
+    _ctx.closePath();
     _ctx.fillStyle = '#eab308';
-    _ctx.font = '11px sans-serif';
-    _ctx.fillText('Goal', g.x + 12, g.y - 4);
+    _ctx.fill();
+    _ctx.strokeStyle = '#fff';
+    _ctx.lineWidth = 1.5;
+    _ctx.stroke();
+    _ctx.restore();
+
+    _ctx.fillStyle = '#eab308';
+    _ctx.font = 'bold 11px sans-serif';
+    _ctx.fillText('Goal', g.x + as + 4, g.y - 4);
+    _ctx.restore();
+  }
+
+  // Temporary waypoint preview (position panel, before the user saves)
+  function _drawPreviewWp() {
+    if (!_previewWp) return;
+    const c = _worldToCanvas(_previewWp.x, _previewWp.y);
+    const s = 10 * Math.min(_zoom, 1.5);
+    _ctx.save();
+
+    // Outer glow
+    _ctx.beginPath();
+    _ctx.arc(c.x, c.y, s * 2, 0, Math.PI*2);
+    _ctx.fillStyle = 'rgba(168,85,247,.15)';
+    _ctx.fill();
+
+    // Yaw arrow (if set)
+    if (_previewWp.yaw != null) {
+      _ctx.translate(c.x, c.y);
+      _ctx.rotate(-_previewWp.yaw);
+      _ctx.beginPath();
+      _ctx.moveTo(s * 1.6, 0);
+      _ctx.lineTo(-s, -s * .8);
+      _ctx.lineTo(-s * .4, 0);
+      _ctx.lineTo(-s, s * .8);
+      _ctx.closePath();
+      _ctx.fillStyle = '#a855f7';
+      _ctx.globalAlpha = 0.85;
+      _ctx.fill();
+      _ctx.strokeStyle = '#fff';
+      _ctx.lineWidth = 1.2;
+      _ctx.stroke();
+      _ctx.setTransform(1,0,0,1,0,0);
+      _ctx.globalAlpha = 1;
+    }
+
+    // Centre dot
+    _ctx.beginPath();
+    _ctx.arc(c.x, c.y, s * 0.55, 0, Math.PI*2);
+    _ctx.fillStyle = '#fff';
+    _ctx.fill();
+
+    // Outer ring (dashed = "pending / not saved")
+    _ctx.beginPath();
+    _ctx.arc(c.x, c.y, s, 0, Math.PI*2);
+    _ctx.strokeStyle = '#a855f7';
+    _ctx.lineWidth = 2;
+    _ctx.setLineDash([4, 3]);
+    _ctx.stroke();
+    _ctx.setLineDash([]);
+
+    _ctx.fillStyle = '#a855f7';
+    _ctx.font = 'bold 11px sans-serif';
+    _ctx.fillText('New', c.x + s + 5, c.y - 4);
+    _ctx.restore();
+  }
+
+  // Preview arrow while user drags to set nav goal / relocate / position direction
+  function _drawNavDrag() {
+    if (!_navDrag) return;
+    const isRelocate = _navDrag.tool === 'relocate';
+    const isPosition = _navDrag.tool === 'position';
+    // yellow=nav, green=relocate, purple=position
+    const color = isRelocate ? '#22c55e' : isPosition ? '#a855f7' : '#eab308';
+    const label = isRelocate ? 'Pose' : isPosition ? 'Point' : 'Goal';
+    const s = _worldToCanvas(_navDrag.startWorld.x, _navDrag.startWorld.y);
+
+    _ctx.save();
+    // Marker circle at click origin
+    _ctx.beginPath();
+    _ctx.arc(s.x, s.y, 8 * Math.min(_zoom, 1.5), 0, Math.PI*2);
+    _ctx.fillStyle = isRelocate ? 'rgba(34,197,94,.5)' : 'rgba(234,179,8,.5)';
+    _ctx.fill();
+    _ctx.strokeStyle = '#fff';
+    _ctx.lineWidth = 1.5;
+    _ctx.stroke();
+
+    if (_navDrag.moved && _navDrag.currentWorld) {
+      const e = _worldToCanvas(_navDrag.currentWorld.x, _navDrag.currentWorld.y);
+      const ang = Math.atan2(e.y - s.y, e.x - s.x);
+      const len = Math.hypot(e.x - s.x, e.y - s.y);
+
+      // Direction line
+      _ctx.strokeStyle = color;
+      _ctx.lineWidth = 2;
+      _ctx.setLineDash([6,4]);
+      _ctx.beginPath();
+      _ctx.moveTo(s.x, s.y);
+      _ctx.lineTo(e.x, e.y);
+      _ctx.stroke();
+      _ctx.setLineDash([]);
+
+      // Arrowhead at end
+      const ah = Math.min(16, Math.max(8, len * 0.35));
+      _ctx.fillStyle = color;
+      _ctx.beginPath();
+      _ctx.moveTo(e.x, e.y);
+      _ctx.lineTo(e.x - ah*Math.cos(ang - 0.45), e.y - ah*Math.sin(ang - 0.45));
+      _ctx.lineTo(e.x - ah*Math.cos(ang + 0.45), e.y - ah*Math.sin(ang + 0.45));
+      _ctx.closePath();
+      _ctx.fill();
+
+      // Angle label
+      const worldYaw = Math.atan2(
+        _navDrag.currentWorld.y - _navDrag.startWorld.y,
+        _navDrag.currentWorld.x - _navDrag.startWorld.x,
+      );
+      _ctx.fillStyle = color;
+      _ctx.font = 'bold 11px sans-serif';
+      _ctx.fillText(`${label} ${(worldYaw * 180 / Math.PI).toFixed(0)}°`, s.x + 12, s.y - 10);
+    } else {
+      // No drag yet — show label
+      _ctx.fillStyle = color;
+      _ctx.font = 'bold 11px sans-serif';
+      _ctx.fillText(label, s.x + 12, s.y - 6);
+    }
     _ctx.restore();
   }
 
@@ -442,9 +633,24 @@ window.MapEngine = (() => {
 
   /* ── Mouse events ─────────────────────────────────────────────────────── */
   function _onMouseDown(e) {
+    // Middle-click or pan tool → pan
     if (e.button === 1 || _tool === 'pan') {
       _drag = { sx: e.clientX, sy: e.clientY, px0: _panX, py0: _panY };
       _canvas.style.cursor = 'grabbing';
+      return;
+    }
+    // Left-click in nav/relocate/position → start click+drag (position + yaw)
+    if (e.button === 0 && (_tool === 'nav' || _tool === 'relocate' || _tool === 'position')) {
+      const rect = _canvas.getBoundingClientRect();
+      const cx = (e.clientX - rect.left) * (_canvas.width  / rect.width);
+      const cy = (e.clientY - rect.top)  * (_canvas.height / rect.height);
+      _navDrag = {
+        startWorld:   _canvasToWorld(cx, cy),
+        startCx: cx, startCy: cy,
+        currentWorld: _canvasToWorld(cx, cy),
+        moved: false,
+        tool: _tool,
+      };
     }
   }
 
@@ -461,6 +667,14 @@ window.MapEngine = (() => {
       _panY = _drag.py0 + (e.clientY - _drag.sy);
     }
 
+    // Nav drag direction tracking
+    if (_navDrag) {
+      _navDrag.currentWorld = world;
+      if (Math.hypot(cx - _navDrag.startCx, cy - _navDrag.startCy) > 8) {
+        _navDrag.moved = true;
+      }
+    }
+
     // Update cursor pos display
     const el = document.getElementById('cursor-pos');
     if (el) el.textContent = `x: ${world.x.toFixed(2)}  y: ${world.y.toFixed(2)}`;
@@ -470,12 +684,30 @@ window.MapEngine = (() => {
     if (_drag) {
       _drag = null;
       _canvas.style.cursor = '';
+      return;
+    }
+    // Finalize drag (nav / relocate / position)
+    if (_navDrag && e.button === 0) {
+      const drag = _navDrag;
+      _navDrag = null;
+      const pos = drag.startWorld;
+      let yaw = 0;
+      if (drag.moved && drag.currentWorld) {
+        yaw = Math.atan2(
+          drag.currentWorld.y - pos.y,
+          drag.currentWorld.x - pos.x,
+        );
+      }
+      // Only update map goal marker for nav tool
+      if (drag.tool === 'nav') _goalWorld = { ...pos, yaw };
+      if (_toolCb) _toolCb(pos, yaw);
     }
   }
 
   function _onClick(e) {
     if (e.button !== 0) return;
-    if (_drag) return;  // was panning
+    if (_drag) return;
+    if (_tool === 'nav' || _tool === 'relocate' || _tool === 'position') return;  // handled in mousedown/up
 
     const rect   = _canvas.getBoundingClientRect();
     const cx     = (e.clientX - rect.left) * (_canvas.width  / rect.width);
@@ -483,16 +715,12 @@ window.MapEngine = (() => {
     const world  = _canvasToWorld(cx, cy);
 
     if (_tool === 'wall' || _tool === 'area') {
-      // Close area if near first point
       if (_tool === 'area' && _drawPts.length >= 3) {
         const first = _worldToCanvas(_drawPts[0].x, _drawPts[0].y);
         const dist  = Math.hypot(cx - first.x, cy - first.y);
         if (dist < 14) { _finishDraw(); return; }
       }
       _drawPts.push(world);
-    } else if (_tool === 'nav') {
-      _goalWorld = world;
-      if (_toolCb) _toolCb(world);
     } else if (_tool === 'relocate') {
       if (_toolCb) _toolCb(world);
     } else if (_tool === 'position') {
@@ -569,9 +797,9 @@ window.MapEngine = (() => {
     const msgs = {
       wall:     '🖱 Click to place points · Right-click to undo · Double-click to finish',
       area:     '🖱 Click to place vertices · Click near start to close · Right-click to undo',
-      position: '🖱 Click on map to place waypoint',
-      relocate: '🖱 Click to set initial pose',
-      nav:      '🖱 Click to set navigation goal',
+      position: '🖱 Click để đặt waypoint · Kéo để chọn hướng',
+      relocate: '🖱 Click để đặt vị trí · Kéo để chọn hướng (2D Pose Estimate)',
+      nav:      '🖱 Click để đặt goal · Kéo để chọn hướng',
       measure:  '🖱 Click start · Click end · Double-click to reset',
       pan:      '',
     };
@@ -591,37 +819,57 @@ window.MapEngine = (() => {
 
   async function loadMap() {
     const r = await API.get('/atlas/map');
-    if (r.ok && r.data.width) {
-      _meta = {
-        width:      r.data.width,
-        height:     r.data.height,
-        resolution: r.data.resolution,
-        origin:     r.data.origin ?? { x: 0, y: 0 },
-      };
-      _bg.src = `http://${Cfg.restHost}/atlas/map/image?_=${Date.now()}`;
+    if (!r.ok || !r.data.width) return;
+
+    // Detect if map actually changed (different size/resolution = different map)
+    const newKey = `${r.data.width}x${r.data.height}x${r.data.resolution}`;
+    const mapChanged = newKey !== _metaKey;
+    _metaKey = newKey;
+
+    _meta = {
+      width:      r.data.width,
+      height:     r.data.height,
+      resolution: r.data.resolution,
+      origin:     r.data.origin ?? { x: 0, y: 0 },
+    };
+    _bg.src = `http://${Cfg.restHost}/atlas/map/image?_=${Date.now()}`;
+    // Only reset zoom/pan when the map itself changes, not on routine image refresh
+    if (mapChanged) {
       _bg.onload = _fitMap;
+    } else {
+      _bg.onload = null;
     }
   }
 
-  function setLaserWorld(coords, poseX, poseY) {
-    // coords are pixel-offsets from ros_node (scale=20, res=0.05)
+  // coords: [[lx,ly]…] pixel-offsets in robot body frame (scale=20, res=0.05)
+  // Rotate by yaw to convert body frame → world frame before plotting.
+  function setLaserWorld(coords, poseX, poseY, yaw = 0) {
     if (!_meta) return;
-    _laser = coords.map(([lx, ly]) => ({
-      x: poseX + lx * _meta.resolution,
-      y: poseY + ly * _meta.resolution,
-    }));
+    const cosY = Math.cos(yaw);
+    const sinY = Math.sin(yaw);
+    _laser = coords.map(([lx, ly]) => {
+      const bx = lx * _meta.resolution;
+      const by = ly * _meta.resolution;
+      return {
+        x: poseX + bx * cosY - by * sinY,
+        y: poseY + bx * sinY + by * cosY,
+      };
+    });
   }
 
-  function setPose(p)       { _pose = p; }
-  function setGoal(w)       { _goalWorld = w; }
-  function clearGoal()      { _goalWorld = null; }
-  function setWaypoints(w)  { _waypoints = w; }
-  function setRoutes(r)     { _routes = r; }
-  function setWalls(w)      { _walls = w; }
-  function setAreas(a)      { _areas = a; }
-  function setPath(p)       { _path = p; }
-  function getZoom()        { return _zoom; }
-  function getMeta()        { return _meta; }
+  function setPose(p)        { _pose = p; }
+  function setGoal(w)        { _goalWorld = w; }
+  function clearGoal()       { _goalWorld = null; }
+  function setWaypoints(w)   { _waypoints = w; }
+  function setRoutes(r)      { _routes = r; }
+  function setWalls(w)       { _walls = w; }
+  function setAreas(a)       { _areas = a; }
+  function setNavPath(pts)         { _navPath = pts ?? []; }
+  function clearNavPath()          { _navPath = []; }
+  function setPreviewWaypoint(w)   { _previewWp = w; }
+  function clearPreviewWaypoint()  { _previewWp = null; }
+  function getZoom()         { return _zoom; }
+  function getMeta()         { return _meta; }
 
   function zoomIn()    { _zoom = Math.min(12, _zoom * 1.2); }
   function zoomOut()   { _zoom = Math.max(.15, _zoom / 1.2); }
@@ -630,7 +878,9 @@ window.MapEngine = (() => {
   return {
     init, loadMap, setTool, cancelDraw,
     setPose, setLaserWorld, setGoal, clearGoal,
-    setWaypoints, setRoutes, setWalls, setAreas, setPath,
+    setNavPath, clearNavPath,
+    setPreviewWaypoint, clearPreviewWaypoint,
+    setWaypoints, setRoutes, setWalls, setAreas,
     zoomIn, zoomOut, resetView, getMeta, getZoom,
   };
 })();

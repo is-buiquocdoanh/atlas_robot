@@ -18,7 +18,8 @@ _ENDPOINTS = {
     'system': [
         'GET  /atlas/version',
         'GET  /atlas/mode',
-        'POST /atlas/mode          {"mode": 1|2|3}',
+        'POST /atlas/mode          {"mode": 1|2|3, "map": "<map_id>"}',
+        'GET  /atlas/launch/status',
         'GET  /atlas/hostname',
         'GET  /atlas/status',
     ],

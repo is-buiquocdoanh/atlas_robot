@@ -19,18 +19,21 @@
   <div id="toolbar" class="tb-center">
     <!-- Nav mode buttons -->
     <div id="tb-nav" class="tb-group">
-      <button class="tb-btn" data-tool="pan"      title="Pan">✥ Drag</button>
-      <button class="tb-btn" data-tool="relocate" title="Relocate">⊙ Relocate</button>
-      <button class="tb-btn" data-tool="measure"  title="Measure">📏 Measure</button>
-      <button class="tb-btn active" data-tool="nav" title="Navigate">✈ Navi</button>
-      <button class="tb-btn danger" id="btn-cancel-navi" title="Cancel navigation">✖ Cancel</button>
-      <button class="tb-btn" id="btn-charge"   title="Go charge">⚡ Charge</button>
-      <button class="tb-btn" id="btn-stop-all" title="Emergency stop">⛔ Stop</button>
+      <button class="tb-btn" data-tool="pan"      title="Pan map">Drag</button>
+      <button class="tb-btn" data-tool="nav"      title="Set navigation goal (click+drag for yaw)">Navi Goal</button>
+      <button class="tb-btn" data-tool="relocate" title="Set robot pose (click+drag for yaw)">Set Pose</button>
+      <button class="tb-btn" data-tool="measure"  title="Measure distance">Measure</button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn tb-btn-warn" id="btn-cancel-navi" title="Cancel navigation">Cancel Nav</button>
+      <button class="tb-btn" id="btn-charge-approach" title="Navigate to front of charging station (Stage 1)">Approach</button>
+      <button class="tb-btn" id="btn-charge-dock"     title="Dock into charging station (Stage 2)">Dock</button>
+      <button class="tb-btn" id="btn-charge"          title="Full charge sequence: approach then dock">Charge All</button>
+      <button class="tb-btn tb-btn-stop" id="btn-stop-all" title="Emergency stop">STOP</button>
     </div>
     <!-- Build mode buttons -->
     <div id="tb-build" class="tb-group" hidden>
-      <button class="tb-btn active" id="btn-finish-map">✔ Finish Map</button>
-      <button class="tb-btn" id="btn-save-map-build">💾 Save Map</button>
+      <button class="tb-btn active" id="btn-finish-map">Finish Map</button>
+      <button class="tb-btn" id="btn-save-map-build">Save Map</button>
     </div>
   </div>
 
@@ -38,10 +41,11 @@
     <span class="si" id="si-laser"><span class="dot"></span>Laser</span>
     <span class="si" id="si-imu"><span class="dot"></span>IMU</span>
     <span class="si" id="si-estop"><span class="dot red"></span>E-stop</span>
-    <span class="si-val"><span id="si-bat">--%</span></span>
-    <span class="si-val">↔ <span id="si-lspd">0.00</span> m/s</span>
-    <span class="si-val">↻ <span id="si-aspd">0.00</span> r/s</span>
-    <span class="si-val">(<span id="si-x">0.00</span>, <span id="si-y">0.00</span>)</span>
+    <span class="si-val"><span id="si-bat" class="si-num" style="min-width:34px">--%</span></span>
+    <span class="si-val">Vx <span id="si-lspd" class="si-num">0.00</span></span>
+    <span class="si-val">Wz <span id="si-aspd" class="si-num">0.00</span></span>
+    <span class="si-val">X <span id="si-x" class="si-num">0.00</span></span>
+    <span class="si-val">Y <span id="si-y" class="si-num">0.00</span></span>
     <span class="si-val robot-type">Atlas A1</span>
   </div>
 </div>
@@ -150,11 +154,23 @@
 
 <!-- Context menu for map -->
 <div id="ctx-menu" hidden>
-  <div class="ctx-item" id="ctx-nav-here">✈ Navigate here</div>
-  <div class="ctx-item" id="ctx-add-wp">📍 Add waypoint here</div>
-  <div class="ctx-item" id="ctx-relocate-here">⊙ Relocate here</div>
+  <div class="ctx-item" id="ctx-nav-here">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    Navigate here
+  </div>
+  <div class="ctx-item" id="ctx-add-wp">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2C7.6 2 4 5.6 4 10c0 6 8 12 8 12s8-6 8-12c0-4.4-3.6-8-8-8z"/></svg>
+    Add waypoint here
+  </div>
+  <div class="ctx-item" id="ctx-relocate-here">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg>
+    Set pose here
+  </div>
   <div class="ctx-sep"></div>
-  <div class="ctx-item" id="ctx-clear-goal">✖ Clear goal</div>
+  <div class="ctx-item" id="ctx-clear-goal">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    Clear goal
+  </div>
 </div>
 
 <script src="js/api.js"></script>
