@@ -9,6 +9,7 @@ Thread layout:
   atlas-bc     — status broadcast loop (~5 Hz → WebSocket)
 """
 import logging
+import os
 import threading
 import time
 
@@ -34,8 +35,10 @@ def main(args=None):
     rclpy.init(args=args)
 
     # 1 ── ROS node + executor ──────────────────────────────────────────────
+    robot_type = os.environ.get('ATLAS_ROBOT', 'real')
     node = ros_node.init_node()
-    lm_module.init_launch_manager(node.get_logger())
+    lm_module.init_launch_manager(node.get_logger(), robot_type=robot_type)
+    log.info('Robot type: %s', robot_type)
     executor = MultiThreadedExecutor(num_threads=4)
     executor.add_node(node)
 

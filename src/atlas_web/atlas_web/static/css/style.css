@@ -532,3 +532,110 @@ select.pf-input { cursor: pointer; }
 
 /* ── Scrollbar ───────────────────────────────────────── */
 #nav-panel-inner { scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
+
+/* ══════════════════════════════════════════════════════
+   Virtual Joystick
+   ══════════════════════════════════════════════════════ */
+#joystick-wrap {
+  position: fixed;
+  bottom: 32px;
+  right: 28px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.32;
+  transition: opacity 0.25s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#joystick-wrap:hover { opacity: 0.70; }
+#joystick-wrap.js-active { opacity: 0.92; }
+
+/* Base ring */
+#joystick-base {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(20,28,50,0.82) 60%, rgba(10,16,35,0.90) 100%);
+  border: 2px solid rgba(255,255,255,0.18);
+  box-shadow:
+    0 4px 24px rgba(0,0,0,0.55),
+    inset 0 1px 2px rgba(255,255,255,0.06);
+  cursor: grab;
+  touch-action: none;
+  overflow: visible;
+}
+#joystick-wrap.js-active #joystick-base {
+  cursor: grabbing;
+  border-color: rgba(99,179,237,0.45);
+  box-shadow:
+    0 4px 28px rgba(0,0,0,0.6),
+    0 0 0 3px rgba(59,130,246,0.18);
+}
+
+/* Crosshair */
+.js-cross-h, .js-cross-v {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255,255,255,0.08);
+  pointer-events: none;
+  border-radius: 1px;
+}
+.js-cross-h { width: 104px; height: 1px; }
+.js-cross-v { width: 1px;   height: 104px; }
+
+/* Direction arrows */
+.js-arrow {
+  position: absolute;
+  font-size: 8px;
+  color: rgba(255,255,255,0.28);
+  pointer-events: none;
+  line-height: 1;
+}
+.js-arrow-n { top: 7px;    left: 50%;    transform: translateX(-50%); }
+.js-arrow-s { bottom: 7px; left: 50%;    transform: translateX(-50%); }
+.js-arrow-w { left: 7px;   top: 50%;     transform: translateY(-50%); }
+.js-arrow-e { right: 7px;  top: 50%;     transform: translateY(-50%); }
+#joystick-wrap.js-active .js-arrow { color: rgba(255,255,255,0.50); }
+
+/* Knob */
+#joystick-knob {
+  position: absolute;
+  width: 42px;
+  height: 42px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 34%,
+    rgba(255,255,255,0.92) 0%,
+    rgba(200,215,255,0.75) 55%,
+    rgba(150,180,240,0.55) 100%);
+  box-shadow:
+    0 2px 10px rgba(0,0,0,0.45),
+    inset 0 1px 3px rgba(255,255,255,0.7);
+  pointer-events: none;
+  will-change: transform;
+}
+#joystick-wrap.js-active #joystick-knob {
+  background: radial-gradient(circle at 36% 34%,
+    #bfdbfe 0%,
+    #3b82f6 55%,
+    #1d4ed8 100%);
+  box-shadow:
+    0 2px 14px rgba(59,130,246,0.6),
+    inset 0 1px 3px rgba(255,255,255,0.35);
+}
+
+/* Label */
+#joystick-label {
+  font-size: 9px;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  font-weight: 600;
+}

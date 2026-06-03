@@ -49,15 +49,23 @@ def generate_launch_description():
         name='odom_relay',
         output='screen',
         arguments=['/odom', '/atlas/odom'],
-        # parameters=[{'use_sim_time': True}],
     )
     
     # Atlas API
-    atlas_api = IncludeLaunchDescription(
+    atlas_api_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
             get_package_share_directory('atlas_api'),
             'launch',
-            'atlas_api.launch.py'
+            'atlas_api_sim.launch.py'
+        ))
+    )
+    
+    # Atlas Web
+    atlas_web = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(
+            get_package_share_directory('atlas_web'),
+            'launch',
+            'atlas_web.launch.py'
         ))
     )
 
@@ -67,7 +75,8 @@ def generate_launch_description():
         a1_joystick,
         a1_fake_status,
         odom_relay,
-        atlas_api
+        atlas_api_sim,
+        atlas_web,
     ])
 
 # save map

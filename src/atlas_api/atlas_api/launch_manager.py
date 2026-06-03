@@ -22,8 +22,9 @@ from typing import Optional
 class LaunchManager:
     _KEYS = ('slam', 'map_server', 'navigation')
 
-    def __init__(self, logger=None):
+    def __init__(self, logger=None, robot_type: str = 'real'):
         self._logger = logger
+        self._robot  = robot_type   # 'sim' | 'real'
         self._lock   = threading.Lock()
         self._procs: dict[str, Optional[subprocess.Popen]] = {k: None for k in self._KEYS}
 
@@ -74,7 +75,8 @@ class LaunchManager:
         with self._lock:
             self._kill('navigation')
             self._kill('map_server')
-            self._spawn('slam', ['ros2', 'launch', 'a1_slam', 'a1_slam_toolbox.launch.py'])
+            self._spawn('slam', ['ros2', 'launch', 'a1_slam',
+                                 f'a1_slam_toolbox_{self._robot}.launch.py'])
 
     def start_incremental_mapping(self, posegraph_base: str):
         """Kill nav stack, start slam_toolbox and load an existing posegraph for extension.
@@ -86,7 +88,7 @@ class LaunchManager:
         with self._lock:
             self._kill('navigation')
             self._kill('map_server')
-            cmd = ['ros2', 'launch', 'a1_slam', 'a1_slam_toolbox.launch.py']
+            cmd = ['ros2', 'launch', 'a1_slam', f'a1_slam_toolbox_{self._robot}.launch.py']
             if posegraph_base:
                 cmd += [f'map_file:={posegraph_base}']
             self._spawn('slam', cmd)
@@ -95,11 +97,12 @@ class LaunchManager:
         """Kill slam, start map_server + navigation."""
         with self._lock:
             self._kill('slam')
-            cmd_map = ['ros2', 'launch', 'a1_slam', 'a1_map_server.launch.py']
+            cmd_map = ['ros2', 'launch', 'a1_slam', f'a1_map_server_{self._robot}.launch.py']
             if map_yaml and os.path.exists(map_yaml):
                 cmd_map += [f'map:={map_yaml}']
             self._spawn('map_server', cmd_map)
-            self._spawn('navigation', ['ros2', 'launch', 'a1_slam', 'a1_navigation.launch.py'])
+            self._spawn('navigation', ['ros2', 'launch', 'a1_slam',
+                                       f'a1_navigation_{self._robot}.launch.py'])
 
     def stop_navigation(self):
         """Stop map_server and navigation (go to idle without starting slam)."""
@@ -110,7 +113,7 @@ class LaunchManager:
     def restart_map_server(self, map_yaml: str = ''):
         """Restart only the map_server with a new map yaml (live map switch)."""
         with self._lock:
-            cmd_map = ['ros2', 'launch', 'a1_slam', 'a1_map_server.launch.py']
+            cmd_map = ['ros2', 'launch', 'a1_slam', f'a1_map_server_{self._robot}.launch.py']
             if map_yaml and os.path.exists(map_yaml):
                 cmd_map += [f'map:={map_yaml}']
             self._spawn('map_server', cmd_map)
@@ -131,9 +134,9 @@ class LaunchManager:
 _manager: Optional[LaunchManager] = None
 
 
-def init_launch_manager(logger=None) -> LaunchManager:
+def init_launch_manager(logger=None, robot_type: str = 'real') -> LaunchManager:
     global _manager
-    _manager = LaunchManager(logger)
+    _manager = LaunchManager(logger, robot_type)
     return _manager
 
 

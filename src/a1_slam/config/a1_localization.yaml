@@ -1,13 +1,11 @@
 map_server:
   ros__parameters:
-    use_sim_time: true
     # Overridden in launch by the "map" launch configuration or provided default value.
     # To use in yaml, remove the default "map" value in the tb3_simulation_launch.py file & provide full path to map below.
     yaml_filename: ""
 
 map_saver:
   ros__parameters:
-    use_sim_time: true
     save_map_timeout: 5.0
     free_thresh_default: 0.25
     occupied_thresh_default: 0.65
@@ -15,7 +13,6 @@ map_saver:
 
 amcl:
   ros__parameters:
-    use_sim_time: true
     alpha1: 0.4 # Độ lệch chuẩn cho lỗi trong chuyển động quay, giúp robot đánh giá chính xác hơn về khả năng xảy ra lỗi khi thực hiện các chuyển động quay, đặc biệt là khi robot phải xoay nhiều hoặc trong môi trường có nhiều chướng ngại vật.
     alpha2: 0.4
     alpha3: 0.4
@@ -72,7 +69,6 @@ slam_toolbox:
     scan_topic: /atlas/scan_filtered
     use_map_saver: true
     mode: localization
-    use_sim_time: true
 
     # if you'd like to immediately start continuing a map at a given pose
     # or at the dock, but they are mutually exclusive, if pose is given
