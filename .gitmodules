@@ -1,0 +1,6 @@
+[submodule "src/atlas_api"]
+	path = src/atlas_api
+	url = git@github.com:is-buiquocdoanh/atlas_api.git
+[submodule "src/atlas_web"]
+	path = src/atlas_web
+	url = git@github.com:is-buiquocdoanh/atlas_web.git
