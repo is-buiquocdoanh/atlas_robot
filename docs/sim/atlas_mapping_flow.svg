@@ -1,0 +1,99 @@
+<svg width="100%" viewBox="0 0 680 700" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Atlas A1 Mapping Flow</title>
+  <desc>Luồng tạo bản đồ: từ Build mode → slam_toolbox → lái robot → lưu bản đồ → chuyển Navigation</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect width="680" height="700" fill="rgb(250,250,248)" rx="8"/>
+  <text x="340" y="28" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="15" font-weight="600" fill="rgb(30,30,28)">Quy trình tạo bản đồ (Mapping)</text>
+
+  <!-- STEP 1: Mở Web UI -->
+  <g onclick="sendPrompt('Mở Web UI Atlas tại địa chỉ nào?')">
+    <rect x="215" y="45" width="250" height="52" rx="10" fill="rgb(230,241,251)" stroke="rgb(24,95,165)" stroke-width="1.5"/>
+    <text x="340" y="67" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" font-weight="600" fill="rgb(12,68,124)">Mở Web UI</text>
+    <text x="340" y="85" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="rgb(24,95,165)">http://localhost:8888</text>
+  </g>
+  <line x1="340" y1="97" x2="340" y2="118" stroke="rgb(115,114,108)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- STEP 2: Build mode -->
+  <g onclick="sendPrompt('Chuyển sang Build mode trong Atlas Web UI như thế nào?')">
+    <rect x="215" y="118" width="250" height="52" rx="10" fill="rgb(241,239,232)" stroke="rgb(95,94,90)" stroke-width="1.5"/>
+    <text x="340" y="140" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" font-weight="600" fill="rgb(68,68,65)">Sidebar → Build mode</text>
+    <text x="340" y="158" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="rgb(95,94,90)">POST /atlas/mode  {"mode": 1}</text>
+  </g>
+  <line x1="340" y1="170" x2="340" y2="191" stroke="rgb(115,114,108)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- STEP 3: slam_toolbox khởi động -->
+  <g onclick="sendPrompt('slam_toolbox async mode hoạt động như thế nào khi mapping?')">
+    <rect x="185" y="191" width="310" height="60" rx="10" fill="rgb(225,245,238)" stroke="rgb(15,110,86)" stroke-width="1.5"/>
+    <text x="340" y="215" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" font-weight="600" fill="rgb(8,80,65)">slam_toolbox khởi động</text>
+    <text x="340" y="233" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="rgb(15,110,86)">Bản đồ hiển thị real-time trên Web UI</text>
+  </g>
+  <line x1="340" y1="251" x2="340" y2="272" stroke="rgb(115,114,108)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- STEP 4: Decision - điều khiển robot -->
+  <g onclick="sendPrompt('Có những cách nào để điều khiển robot khi mapping?')">
+    <polygon points="340,272 490,312 340,352 190,312" fill="rgb(255,247,219)" stroke="rgb(146,108,10)" stroke-width="1.5"/>
+    <text x="340" y="307" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" font-weight="600" fill="rgb(107,78,7)">Điều khiển robot</text>
+    <text x="340" y="323" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="rgb(146,108,10)">đi khắp khu vực</text>
+  </g>
+
+  <!-- Branch: Web Joystick (left) -->
+  <line x1="190" y1="312" x2="100" y2="312" stroke="rgb(115,114,108)" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="146" y="305" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="rgb(95,94,90)">Web</text>
+  <g onclick="sendPrompt('Joystick ảo trên Atlas Web UI hoạt động như thế nào?')">
+    <rect x="18" y="289" width="82" height="46" rx="8" fill="rgb(241,239,232)" stroke="rgb(95,94,90)" stroke-width="1.2"/>
+    <text x="59" y="309" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" font-weight="500" fill="rgb(68,68,65)">Joystick</text>
+    <text x="59" y="325" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="rgb(95,94,90)">Web UI</text>
+  </g>
+  <line x1="59" y1="335" x2="59" y2="395" stroke="rgb(115,114,108)" stroke-width="1.2"/>
+  <line x1="59" y1="395" x2="225" y2="395" stroke="rgb(115,114,108)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Branch: Gamepad (right) -->
+  <line x1="490" y1="312" x2="580" y2="312" stroke="rgb(115,114,108)" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="536" y="305" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="rgb(95,94,90)">Physical</text>
+  <g onclick="sendPrompt('Gamepad hoặc joystick vật lý kết nối Atlas A1 như thế nào?')">
+    <rect x="580" y="289" width="82" height="46" rx="8" fill="rgb(241,239,232)" stroke="rgb(95,94,90)" stroke-width="1.2"/>
+    <text x="621" y="309" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" font-weight="500" fill="rgb(68,68,65)">Gamepad</text>
+    <text x="621" y="325" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="rgb(95,94,90)">Joy node</text>
+  </g>
+  <line x1="621" y1="335" x2="621" y2="395" stroke="rgb(115,114,108)" stroke-width="1.2"/>
+  <line x1="621" y1="395" x2="455" y2="395" stroke="rgb(115,114,108)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- STEP 5: Bản đồ được xây dựng -->
+  <g onclick="sendPrompt('slam_toolbox tạo bản đồ OccupancyGrid như thế nào?')">
+    <rect x="225" y="378" width="230" height="52" rx="10" fill="rgb(225,245,238)" stroke="rgb(15,110,86)" stroke-width="1.5"/>
+    <text x="340" y="400" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" font-weight="600" fill="rgb(8,80,65)">Bản đồ được xây dựng</text>
+    <text x="340" y="418" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="rgb(15,110,86)">LiDAR scan → OccupancyGrid</text>
+  </g>
+  <line x1="340" y1="430" x2="340" y2="451" stroke="rgb(115,114,108)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- STEP 6: Save Map -->
+  <g onclick="sendPrompt('Lưu bản đồ trong Atlas A1 lưu những file gì?')">
+    <rect x="205" y="451" width="270" height="62" rx="10" fill="rgb(241,239,232)" stroke="rgb(95,94,90)" stroke-width="1.5"/>
+    <text x="340" y="475" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" font-weight="600" fill="rgb(68,68,65)">Nhấn Save Map</text>
+    <text x="340" y="493" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="rgb(95,94,90)">.yaml  .pgm  .posegraph  .data</text>
+  </g>
+  <line x1="340" y1="513" x2="340" y2="534" stroke="rgb(115,114,108)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- STEP 7: Saved -->
+  <g onclick="sendPrompt('Bản đồ Atlas được lưu ở thư mục nào?')">
+    <rect x="185" y="534" width="310" height="52" rx="10" fill="rgb(225,245,238)" stroke="rgb(15,110,86)" stroke-width="1.5"/>
+    <text x="340" y="557" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" font-weight="600" fill="rgb(8,80,65)">✅  Bản đồ đã lưu</text>
+    <text x="340" y="575" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="rgb(15,110,86)">src/a1_maps/&lt;tên&gt;/&lt;tên&gt;.yaml</text>
+  </g>
+  <line x1="340" y1="586" x2="340" y2="607" stroke="rgb(115,114,108)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- STEP 8: Finish Map → Navigation -->
+  <g onclick="sendPrompt('Finish Map và chuyển sang Navigation mode như thế nào?')">
+    <rect x="185" y="607" width="310" height="60" rx="10" fill="rgb(255,247,219)" stroke="rgb(146,108,10)" stroke-width="1.5"/>
+    <text x="340" y="631" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" font-weight="600" fill="rgb(107,78,7)">Nhấn Finish Map</text>
+    <text x="340" y="649" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="rgb(146,108,10)">→ Chuyển sang Navigation mode</text>
+  </g>
+
+  <!-- Footer -->
+  <text x="340" y="688" text-anchor="middle" font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="rgb(115,114,108)">Atlas A1  ·  Bui Quoc Doanh  ·  roboticsvn.ai@gmail.com</text>
+</svg>
