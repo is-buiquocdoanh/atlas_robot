@@ -29,8 +29,8 @@ class RouteManager(Node):
         # with `ros2 run ...` for convenience.
         if not route_file:
             try:
-                pkg_dir = get_package_share_directory('a1_slam')
-                route_file = os.path.join(pkg_dir, 'config', 'a1_route.yaml')
+                pkg_dir = get_package_share_directory('atlas_slam')
+                route_file = os.path.join(pkg_dir, 'config', 'atlas_route.yaml')
                 self.get_logger().info(f"No 'route_file' parameter set, using default: {route_file}")
             except Exception as e:
                 self.get_logger().error("Could not locate default route file: %s" % str(e))

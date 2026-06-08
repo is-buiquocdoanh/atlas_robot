@@ -3,11 +3,11 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 
-USE_SIM_TIME = True
+USE_SIM_TIME = False
 
 
 def generate_launch_description():
-    cartographer_pkg = get_package_share_directory('a1_slam')
+    cartographer_pkg = get_package_share_directory('atlas_slam')
     rviz_config = os.path.join(cartographer_pkg, 'rviz', 'cartographer_mapping.rviz')
     configuration_directory = os.path.join(cartographer_pkg, 'config')
     configuration_basename = 'lds_2d.lua'

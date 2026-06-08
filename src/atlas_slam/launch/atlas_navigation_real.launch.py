@@ -7,9 +7,9 @@ USE_SIM_TIME = False
 
 
 def generate_launch_description():
-    package_dir = get_package_share_directory('a1_slam')
-    params_file = os.path.join(package_dir, 'config', 'a1_nav2_mppi.yaml')
-    collision_params = os.path.join(package_dir, 'config', 'a1_collision_monitor.yaml')
+    package_dir = get_package_share_directory('atlas_slam')
+    params_file = os.path.join(package_dir, 'config', 'atlas_nav2_mppi.yaml')
+    collision_params = os.path.join(package_dir, 'config', 'atlas_collision_monitor.yaml')
 
     planner_server = Node(
         package='nav2_planner',

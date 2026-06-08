@@ -15,7 +15,7 @@ def generate_launch_description():
     declare_slam_params_file_cmd = DeclareLaunchArgument(
         'slam_params_file',
         default_value=os.path.join(
-            get_package_share_directory('a1_slam'), 'config', 'a1_slam_toolbox.yaml'),
+            get_package_share_directory('atlas_slam'), 'config', 'atlas_slam_toolbox.yaml'),
         description='Full path to the slam_toolbox ROS2 parameters file'
     )
 
@@ -27,7 +27,7 @@ def generate_launch_description():
     )
 
     rviz_config = os.path.join(
-        get_package_share_directory('a1_slam'), 'rviz', 'slam_toolbox_default.rviz')
+        get_package_share_directory('atlas_slam'), 'rviz', 'slam_toolbox_default.rviz')
 
     start_async_slam_toolbox_node = Node(
         parameters=[
